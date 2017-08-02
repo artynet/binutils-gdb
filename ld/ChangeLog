@@ -1,3 +1,9 @@
+2017-07-17  Arturo Rinaldi  <arty.net2@gmail.com>
+
+	* emultempl/elf32.em (gld${EMULATION_NAME}_before_allocation):
+	Silence uninitialized warning on ehdr_start_save with older
+	GCC.
+
 2017-07-25  Tristan Gingold  <gingold@adacore.com>
 
 	* configure: Regenerate.
