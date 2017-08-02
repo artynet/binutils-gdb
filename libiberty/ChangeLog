@@ -3389,7 +3389,7 @@
 	* partition.c (partition_new, partition_delete, partition_union)
 	(elem_compare, partition_print): Likewise.
 	* obstack.c (_obstack_begin, _obstack_begin_1, _obstack_newchunk,
-	_obstack_allocated_p, _obstack_free, obstack_free,
+	_obstack_allocated_p, obstack_free,
 	_obstack_memory_used, print_and_abort, obstack_next_free,
 	obstack_object_size, obstack_base): Likewise.  Remove codes
 	predicated on !defined(__STDC__).
