@@ -1642,7 +1642,7 @@ gld${EMULATION_NAME}_before_allocation (void)
   /* Work around a GCC uninitialized warning bug fixed in GCC 4.6.  */
   struct bfd_link_hash_entry ehdr_start_save = ehdr_start_empty;
 #else
-  struct bfd_link_hash_entry ehdr_start_save;
+  struct bfd_link_hash_entry ehdr_start_save = ehdr_start_save;
 #endif
 
   if (is_elf_hash_table (link_info.hash))
