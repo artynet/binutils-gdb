@@ -200,7 +200,7 @@ struct obstack          /* control current object in current chunk */
 /* Declare the external functions we use; they are in obstack.c.  */
 
 extern void _obstack_newchunk (struct obstack *, _OBSTACK_SIZE_T);
-extern void _obstack_free (struct obstack *, void *);
+extern void obstack_free (struct obstack *, void *);
 extern int _obstack_begin (struct obstack *,
                            _OBSTACK_SIZE_T, _OBSTACK_SIZE_T,
                            void *(*) (size_t), void (*) (void *));
@@ -422,7 +422,7 @@ extern int obstack_exit_failure;
        if (__obj > (void *) __o->chunk && __obj < (void *) __o->chunk_limit)  \
          __o->next_free = __o->object_base = (char *) __obj;		      \
        else								      \
-         _obstack_free (__o, __obj); })
+         obstack_free (__o, __obj); })
 
 #else /* not __GNUC__ */
 
@@ -524,7 +524,7 @@ extern int obstack_exit_failure;
    (((h)->temp.p > (void *) (h)->chunk					      \
      && (h)->temp.p < (void *) (h)->chunk_limit)			      \
     ? (void) ((h)->next_free = (h)->object_base = (char *) (h)->temp.p)       \
-    : _obstack_free ((h), (h)->temp.p)))
+    : obstack_free ((h), (h)->temp.p)))
 
 #endif /* not __GNUC__ */
 
