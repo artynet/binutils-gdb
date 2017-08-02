@@ -265,7 +265,7 @@ _obstack_allocated_p (struct obstack *h, void *obj)
    more recently than OBJ.  If OBJ is zero, free everything in H.  */
 
 void
-_obstack_free (struct obstack *h, void *obj)
+obstack_free (struct obstack *h, void *obj)
 {
   struct _obstack_chunk *lp;    /* below addr of any objects in this chunk */
   struct _obstack_chunk *plp;   /* point to previous chunk if any */

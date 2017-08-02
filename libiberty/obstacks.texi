@@ -321,7 +321,7 @@ even when not using GNU C.
 
 @code{obstack.h} does declare a number of functions,
 @code{_obstack_begin}, @code{_obstack_begin_1},
-@code{_obstack_newchunk}, @code{_obstack_free}, and
+@code{_obstack_newchunk}, and
 @code{_obstack_memory_used}.  You should not call these directly.
 
 @node Growing Objects
@@ -771,4 +771,3 @@ Tentative starting address of the currently growing object.
 Address just after the end of the currently growing object.
 @xref{Status of an Obstack}.
 @end table
-
