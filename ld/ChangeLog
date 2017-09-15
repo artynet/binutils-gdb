@@ -1,3 +1,86 @@
+2017-07-25  Tristan Gingold  <gingold@adacore.com>
+
+	* configure: Regenerate.
+
+2017-06-20  Thomas Preud'homme  <thomas.preudhomme@arm.com>
+
+	Backport from mainline
+	2017-05-08  Thomas Preud'homme  <thomas.preudhomme@arm.com>
+
+	* testsuite/ld-arm/arm-elf.exp
+	(Secure gateway import library generation): Check e_type field
+	of import library and executable produced.
+	* testsuite/ld-arm/cmse-implib.type: Expectations for e_type field.
+
+2017-06-02  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* emulparams/call_nop.sh: Remove -z prefix-nop.
+	* ld.texinfo: Likewise.
+	* testsuite/ld-i386/call3c.d: Check for linker error.
+	* testsuite/ld-x86-64/call1c.d: Likewise.
+
+2017-05-31  Alan Modra  <amodra@gmail.com>
+
+	* emultempl/ppc64elf.em (plt-static-chain help): Fix quoting.
+
+2017-05-18  Alan Modra  <amodra@gmail.com>
+
+	Apply from master
+	2017-03-13  Alexey Neyman  <stilor@att.net>
+	* emulparams/elf32ppccommon.sh (LIBPATH_SUFFIX): Set from target
+	cpu, not host.
+
+2017-04-28  Senthil Kumar Selvaraj  <senthil_kumar.selvaraj@atmel.com>
+
+	PR ld/21404
+	* testsuite/ld-avr/pr21404-1.d: New test.
+	* testsuite/ld-avr/pr21404-1.s: New test.
+	* testsuite/ld-avr/pr21404-2.d: New test.
+	* testsuite/ld-avr/pr21404-2.s: New test.
+	* testsuite/ld-avr/pr21404-3.d: New test.
+	* testsuite/ld-avr/pr21404-3.s: New test.
+	* testsuite/ld-avr/pr21404-4.d: New test.
+	* testsuite/ld-avr/pr21404-4.s: New test.
+	* testsuite/ld-avr/pr21404-5.d: New test.
+	* testsuite/ld-avr/pr21404-5.s: New test.
+	* testsuite/ld-avr/pr21404-6.d: New test.
+	* testsuite/ld-avr/pr21404-6.s: New test.
+	* testsuite/ld-avr/pr21404-7.d: New test.
+	* testsuite/ld-avr/pr21404-7.s: New test.
+	* testsuite/ld-avr/pr21404-8.d: New test.
+	* testsuite/ld-avr/pr21404-8.s: New test.
+
+2017-04-24  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/20815
+	* testsuite/ld-i386/vxworks2.sd: Add space for program headers.
+
+2017-03-28  Hans-Peter Nilsson  <hp@axis.com>
+
+	PR ld/16044
+	* testsuite/ld-cris/pr16044.d, testsuite/ld-cris/dso-1c.s,
+	testsuite/ld-cris/dso-2b.s, testsuite/ld-cris/dso-4.s: New test.
+
+2017-04-10  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/19579
+	PR ld/21306
+	* testsuite/ld-elf/pr19579a.c (main): Updated.
+
+2017-04-05  Maciej W. Rozycki  <macro@imgtec.com>
+
+	PR ld/21233
+	* ldlang.c (insert_undefined): Set `mark' for ELF symbols.
+
+2017-03-07  Alan Modra  <amodra@gmail.com>
+
+	* ldlang.c (open_input_bfds): Check that lang_assignment_statement
+	is not an assert before referencing defsym.
+
+2017-03-02  Tristan Gingold  <gingold@adacore.com>
+
+	* configure: Regenerate.
+
 2017-03-02  Tristan Gingold  <gingold@adacore.com>
 
 	* configure: Regenerate.

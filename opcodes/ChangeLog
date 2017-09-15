@@ -1,3 +1,81 @@
+2017-07-25  Tristan Gingold  <gingold@adacore.com>
+
+	* configure: Regenerate.
+
+2017-07-05  Ramana Radhakrishnan  <ramana.radhakrishnan@arm.com>
+
+	Backport from mainline
+	2017-07-04  Ramana Radhakrishnan  <ramana.radhakrishnan@arm.com>
+	* arm-dis.c: Support MVFR2 in disassembly with vmrs and vmsr.
+
+2017-05-01  Michael Clark  <michaeljclark@mac.com>
+
+	* riscv-opc.c (riscv_opcodes) <call>: Use RA not T1 as a temporary
+	register.
+
+2017-04-03  Palmer Dabbelt  <palmer@dabbelt.com>
+
+	* riscv-dis.c (riscv_disassemble_insn): Change "_gp" to
+	RISCV_GP_SYMBOL.
+
+2017-03-14  Kito Cheng  <kito.cheng@gmail.com>
+
+	* riscv-opc.c (riscv_opcodes> <c.li>: Use the 'o' immediate encoding.
+	<c.andi>: Likewise.
+	<c.addiw> Likewise.
+
+2017-03-14  Kito Cheng  <kito.cheng@gmail.com>
+
+	* riscv-opc.c (riscv_opcodes) <c.addi>: Use match_opcode.
+
+2017-03-13  Andrew Waterman  <andrew@sifive.com>
+
+	* riscv-opc.c (riscv_opcodes) <srli/C>: Use match_opcode.
+	<srl> Likewise.
+	<srai> Likewise.
+	<sra> Likewise.
+
+2017-03-27  Alan Modra  <amodra@gmail.com>
+
+	PR 21303
+	* ppc-dis.c (struct ppc_mopt): Comment.
+	(ppc_opts <e200z4>): Move PPC_OPCODE_VLE from .sticky to .cpu.
+
+2017-03-21  Andreas Krebbel  <krebbel@linux.vnet.ibm.com>
+
+	Backport from mainline
+	2017-03-21  Andreas Krebbel  <krebbel@linux.vnet.ibm.com>
+
+	* s390-mkopc.c (main): Remove vx2 check.
+	* s390-opc.txt: Remove vx2 instruction flags.
+
+2017-03-08  Peter Bergner  <bergner@vnet.ibm.com>
+
+	* ppc-dis.c (ppc_opts) <altivec>: Do not use PPC_OPCODE_ALTIVEC2;
+	<vsx>: Do not use PPC_OPCODE_VSX3;
+
+2017-03-08  Peter Bergner  <bergner@vnet.ibm.com>
+
+	Apply from master.
+	2017-03-08  Peter Bergner  <bergner@vnet.ibm.com>
+	* ppc-opc.c (powerpc_opcodes) <lnia>: New extended mnemonic.
+
+2017-03-07  Alan Modra  <amodra@gmail.com>
+
+	Apply from master
+	2017-03-06  Alan Modra  <amodra@gmail.com>
+	PR 21124
+	* ppc-opc.c (extract_esync, extract_ls, extract_ral, extract_ram)
+	(extract_raq, extract_ras, extract_rbx): New functions.
+	(powerpc_operands): Use opposite corresponding insert function.
+	(Q_MASK): Define.
+	(powerpc_opcodes): Apply Q_MASK to all quad insns with even
+	register restriction.
+
+2017-03-02  Tristan Gingold  <gingold@adacore.com>
+
+	* configure: Regenerate.
+
 2017-03-02  Tristan Gingold  <gingold@adacore.com>
 
 	* configure: Regenerate.

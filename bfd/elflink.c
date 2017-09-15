@@ -1543,16 +1543,13 @@ _bfd_elf_merge_symbol (bfd *abfd,
      represent variables; this can cause confusion in principle, but
      any such confusion would seem to indicate an erroneous program or
      shared library.  We also permit a common symbol in a regular
-     object to override a weak symbol in a shared object.  A common
-     symbol in executable also overrides a symbol in a shared object.  */
+     object to override a weak symbol in a shared object.  */
 
   if (newdyn
       && newdef
       && (olddef
 	  || (h->root.type == bfd_link_hash_common
-	      && (newweak
-		  || newfunc
-		  || (!olddyn && bfd_link_executable (info))))))
+	      && (newweak || newfunc))))
     {
       *override = TRUE;
       newdef = FALSE;
@@ -6710,6 +6707,8 @@ bfd_boolean
 bfd_elf_size_dynsym_hash_dynstr (bfd *output_bfd, struct bfd_link_info *info)
 {
   const struct elf_backend_data *bed;
+  unsigned long section_sym_count;
+  bfd_size_type dynsymcount;
 
   if (!is_elf_hash_table (info->hash))
     return TRUE;
@@ -6717,23 +6716,29 @@ bfd_elf_size_dynsym_hash_dynstr (bfd *output_bfd, struct bfd_link_info *info)
   bed = get_elf_backend_data (output_bfd);
   (*bed->elf_backend_init_index_section) (output_bfd, info);
 
+  /* Assign dynsym indices.  In a shared library we generate a section
+     symbol for each output section, which come first.  Next come all
+     of the back-end allocated local dynamic syms, followed by the rest
+     of the global symbols.
+
+     This is usually not needed for static binaries, however backends
+     can request to always do it, e.g. the MIPS backend uses dynamic
+     symbol counts to lay out GOT, which will be produced in the
+     presence of GOT relocations even in static binaries (holding fixed
+     data in that case, to satisfy those relocations).  */
+
+  if (elf_hash_table (info)->dynamic_sections_created
+      || bed->always_renumber_dynsyms)
+    dynsymcount = _bfd_elf_link_renumber_dynsyms (output_bfd, info,
+						  &section_sym_count);
+
   if (elf_hash_table (info)->dynamic_sections_created)
     {
       bfd *dynobj;
       asection *s;
-      bfd_size_type dynsymcount;
-      unsigned long section_sym_count;
       unsigned int dtagcount;
 
       dynobj = elf_hash_table (info)->dynobj;
-
-      /* Assign dynsym indicies.  In a shared library we generate a
-	 section symbol for each output section, which come first.
-	 Next come all of the back-end allocated local dynamic syms,
-	 followed by the rest of the global symbols.  */
-
-      dynsymcount = _bfd_elf_link_renumber_dynsyms (output_bfd, info,
-						    &section_sym_count);
 
       /* Work out the size of the symbol version section.  */
       s = bfd_get_linker_section (dynobj, ".gnu.version");
@@ -11141,10 +11146,11 @@ elf_output_implib (bfd *abfd, struct bfd_link_info *info)
   if (!bfd_set_format (implib_bfd, bfd_object))
     return FALSE;
 
+  /* Use flag from executable but make it a relocatable object.  */
   flags = bfd_get_file_flags (abfd);
   flags &= ~HAS_RELOC;
   if (!bfd_set_start_address (implib_bfd, 0)
-      || !bfd_set_file_flags (implib_bfd, flags))
+      || !bfd_set_file_flags (implib_bfd, flags & ~EXEC_P))
     return FALSE;
 
   /* Copy architecture of output file to import library file.  */
@@ -12986,7 +12992,12 @@ elf_gc_sweep (bfd *abfd, struct bfd_link_info *info)
   elf_link_hash_traverse (elf_hash_table (info), elf_gc_sweep_symbol,
 			  &sweep_info);
 
-  _bfd_elf_link_renumber_dynsyms (abfd, info, &section_sym_count);
+  /* We need to reassign dynsym indices now that symbols may have
+     been removed.  See the call in `bfd_elf_size_dynsym_hash_dynstr'
+     for the details of the conditions used here.  */
+  if (elf_hash_table (info)->dynamic_sections_created
+      || bed->always_renumber_dynsyms)
+    _bfd_elf_link_renumber_dynsyms (abfd, info, &section_sym_count);
   return TRUE;
 }
 

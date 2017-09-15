@@ -1,3 +1,153 @@
+2017-07-25  Tristan Gingold  <gingold@adacore.com>
+
+	* version.m4: Bump version to 2.28.1
+	* configure: Regenerate.
+
+2017-07-25  Tristan Gingold  <gingold@adacore.com>
+
+	* development.sh: Set development to false.
+
+2017-06-22  Eric Christopher  <echristo@gmail.com>
+
+	Backport from mainline
+	2017-06-22 Eric Christopher <echristo@gmail.com>
+
+        * elf32-arm.c (elf32_arm_final_link_relocate): Use labs rather than
+        abs to fix a truncation warning.
+
+2017-06-20  Thomas Preud'homme  <thomas.preudhomme@arm.com>
+
+	Backport from mainline
+	2017-05-08  Thomas Preud'homme  <thomas.preudhomme@arm.com>
+
+	* elflink.c (elf_output_implib): Remove executable flag from import
+	library bfd.
+	* elf32-arm.c (elf32_arm_filter_implib_symbols): Assert that the import
+	library is a relocatable object file.
+
+2017-06-13  Nick Clifton  <nickc@redhat.com>
+
+	Import this fix from the mainline sources:
+
+	2017-06-06  James Clarke  <jrtc27@jrtc27.com>
+
+	PR ld/19579
+	* elfnn-aarch64.c (elfNN_aarch64_finish_dynamic_symbol): Check
+	ELF_COMMON_DEF_P for common symbols.
+
+2017-06-07  Nick Clifton  <nickc@redhat.com>
+
+	Import this fix from upstream:
+
+	2017-05-30  Casey Smith  <clegg89@gmail.com>
+
+	PR ld/21523
+	* elf32-arm.c (elf32_arm_final_link_relocate): Install an absolute
+	value when processing the R_ARM_THM_ALU_PREL_11_0 reloc.
+
+2017-06-05  Alan Modra  <amodra@gmail.com>
+
+	PR 21529
+	* linker.c (_bfd_generic_link_output_symbols): Handle BSF_GNU_UNIQUE.
+
+2017-05-01  Senthil Kumar Selvaraj  <senthil_kumar.selvaraj@atmel.com>
+
+	PR ld/21404
+	* elf32-avr.c (avr_should_move_sym): New function.
+	(avr_should_reduce_sym_size): Likewise.
+	(avr_should_increase_sym_size): Likewise.
+	(elf32_avr_relax_delete_bytes): Adjust symbol values
+	and sizes by calling new functions.
+
+2017-05-01  Palmer Dabbelt  <palmer@dabbelt.com>
+
+	* config.bfd (riscv32-*): Enable rv64.
+
+2017-04-03  Palmer Dabbelt  <palmer@dabbelt.com>
+
+	* elfnn-riscv.c (GP_NAME): Delete.
+	(riscv_global_pointer_value): Change GP_NAME to RISCV_GP_SYMBOL.
+	(_bfd_riscv_relax_lui): Likewise.
+
+2017-01-17  Kuan-Lin Chen  <kuanlinchentw@gmail.com>
+
+	* elfnn-riscv.c (riscv_elf_object_p): New function.
+
+2017-04-26  Maciej W. Rozycki  <macro@imgtec.com>
+
+	PR ld/21334
+	* elf-bfd.h (elf_backend_data): Add `always_renumber_dynsyms'
+	member.
+	* elfxx-target.h [!elf_backend_always_renumber_dynsyms]
+	(elf_backend_always_renumber_dynsyms): Define.
+	(elfNN_bed): Initialize `always_renumber_dynsyms' member.
+	* elfxx-mips.h (elf_backend_always_renumber_dynsyms): Define.
+	* elflink.c (bfd_elf_size_dynsym_hash_dynstr): Also call
+	`_bfd_elf_link_renumber_dynsyms' if the backend has requested
+	it.
+	(elf_gc_sweep): Likewise.
+
+2017-04-26  Maciej W. Rozycki  <macro@imgtec.com>
+
+	* elflink.c (elf_gc_sweep): Only call
+	`_bfd_elf_link_renumber_dynsyms' if dynamic sections have been
+	created.
+
+2017-04-24  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/21425
+	* elf32-i386.c (ELF_MAXPAGESIZE): Set to 0x1000 for VxWorks.
+
+2017-03-28  Hans-Peter Nilsson  <hp@axis.com>
+
+	PR ld/16044
+	* elf32-cris.c (elf_cris_adjust_gotplt_to_got): Adjust BFD_ASSERT
+	to handle a local symbol with a hash-symbol-entry; without PLT.
+	Add BFD_ASSERT for an incidental case with GOT entry present.
+	(cris_elf_check_relocs): Increment PLT refcount only if the symbol
+	isn't forced-or-set local.
+
+2017-04-13  Alan Modra  <amodra@gmail.com>
+
+	* elf32-arm.c (arm_type_of_stub): Supply missing args to "long
+	branch veneers" error.  Fix double space and format message.
+	* elf32-avr.c (avr_add_stub): Do not pass NULL as %B arg.
+	* elf64-ppc.c (tocsave_find): Supply missing %B arg.
+
+2017-04-10  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/19579
+	PR ld/21306
+	* elf32-s390.c (elf_s390_finish_dynamic_symbol): Check
+	ELF_COMMON_DEF_P for common symbols.
+	* elf64-s390.c (elf_s390_finish_dynamic_symbol): Likewise.
+	* elf64-x86-64.c (elf_x86_64_relocate_section): Likewise.
+	* elflink.c (_bfd_elf_merge_symbol): Revert commits
+	202ac193bbbecc96a4978d1ac3d17148253f9b01 and
+	07492f668d2173da7a2bda3707ff0985e0f460b6.
+
+2017-03-07  Alan Modra  <amodra@gmail.com>
+
+	PR 21224
+	PR 20519
+	* elf64-ppc.c (ppc64_elf_relocate_section): Add missing
+	dyn_relocs check.
+
+2017-03-07  Alan Modra  <amodra@gmail.com>
+
+	Apply from master
+	2017-03-02  Alan Modra  <amodra@gmail.com>
+	* elf32-ppc.c (ppc_elf_vle_split16): Correct insn mask typo.
+
+2017-03-02  Tristan Gingold  <gingold@adacore.com>
+
+	* version.m4: Bump version to 2.28.0
+	* configure: Regenerate.
+
+2017-03-02  Tristan Gingold  <gingold@adacore.com>
+
+	* development.sh: Set development to true.
+
 2017-03-02  Tristan Gingold  <gingold@adacore.com>
 
 	* version.m4: Bump version to 2.28

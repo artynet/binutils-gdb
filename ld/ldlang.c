@@ -3377,7 +3377,8 @@ open_input_bfds (lang_statement_union_type *s, enum open_bfd_mode mode)
 #endif
 	  break;
 	case lang_assignment_statement_enum:
-	  if (s->assignment_statement.exp->assign.defsym)
+	  if (s->assignment_statement.exp->type.node_class != etree_assert
+	      && s->assignment_statement.exp->assign.defsym)
 	    /* This is from a --defsym on the command line.  */
 	    exp_fold_tree_no_dot (s->assignment_statement.exp);
 	  break;
@@ -3431,6 +3432,8 @@ insert_undefined (const char *name)
     {
       h->type = bfd_link_hash_undefined;
       h->u.undef.abfd = NULL;
+      if (is_elf_hash_table (link_info.hash))
+	((struct elf_link_hash_entry *) h)->mark = 1;
       bfd_link_add_undef (link_info.hash, h);
     }
 }

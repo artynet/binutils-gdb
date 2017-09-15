@@ -52,10 +52,6 @@
 #define ELF_MAXPAGESIZE			0x1000
 #define ELF_COMMONPAGESIZE		0x1000
 
-/* The global pointer's symbol name.  */
-
-#define GP_NAME "__global_pointer$"
-
 /* The RISC-V linker needs to keep track of the number of relocs that it
    decides to copy as dynamic relocs in check_relocs for each symbol.
    This is so that it can later discard them if they are found to be
@@ -1467,7 +1463,7 @@ riscv_global_pointer_value (struct bfd_link_info *info)
 {
   struct bfd_link_hash_entry *h;
 
-  h = bfd_link_hash_lookup (info->hash, GP_NAME, FALSE, FALSE, TRUE);
+  h = bfd_link_hash_lookup (info->hash, RISCV_GP_SYMBOL, FALSE, FALSE, TRUE);
   if (h == NULL || h->type != bfd_link_hash_defined)
     return 0;
 
@@ -2818,7 +2814,8 @@ _bfd_riscv_relax_lui (bfd *abfd,
       /* If gp and the symbol are in the same output section, then
 	 consider only that section's alignment.  */
       struct bfd_link_hash_entry *h =
-	bfd_link_hash_lookup (link_info->hash, GP_NAME, FALSE, FALSE, TRUE);
+	bfd_link_hash_lookup (link_info->hash, RISCV_GP_SYMBOL, FALSE, FALSE,
+			      TRUE);
       if (h->u.def.section->output_section == sym_sec->output_section)
 	max_alignment = (bfd_vma) 1 << sym_sec->output_section->alignment_power;
     }
@@ -3205,6 +3202,19 @@ riscv_elf_grok_psinfo (bfd *abfd, Elf_Internal_Note *note)
   return TRUE;
 }
 
+/* Set the right mach type.  */
+static bfd_boolean
+riscv_elf_object_p (bfd *abfd)
+{
+  /* There are only two mach types in RISCV currently.  */
+  if (strcmp (abfd->xvec->name, "elf32-littleriscv") == 0)
+    bfd_default_set_arch_mach (abfd, bfd_arch_riscv, bfd_mach_riscv32);
+  else
+    bfd_default_set_arch_mach (abfd, bfd_arch_riscv, bfd_mach_riscv64);
+
+  return TRUE;
+}
+
 
 #define TARGET_LITTLE_SYM		riscv_elfNN_vec
 #define TARGET_LITTLE_NAME		"elfNN-littleriscv"
@@ -3230,6 +3240,7 @@ riscv_elf_grok_psinfo (bfd *abfd, Elf_Internal_Note *note)
 #define elf_backend_plt_sym_val		     riscv_elf_plt_sym_val
 #define elf_backend_grok_prstatus            riscv_elf_grok_prstatus
 #define elf_backend_grok_psinfo              riscv_elf_grok_psinfo
+#define elf_backend_object_p                 riscv_elf_object_p
 #define elf_info_to_howto_rel		     NULL
 #define elf_info_to_howto		     riscv_info_to_howto_rela
 #define bfd_elfNN_bfd_relax_section	     _bfd_riscv_relax_section

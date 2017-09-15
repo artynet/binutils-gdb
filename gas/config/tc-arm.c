@@ -7185,8 +7185,14 @@ parse_operands (char *str, const unsigned int *pattern, bfd_boolean thumb)
 	    {
 	      if (inst.operands[i].reg == REG_PC)
 		inst.error = BAD_PC;
-	      else if (inst.operands[i].reg == REG_SP)
-		inst.error = BAD_SP;
+	      else if (inst.operands[i].reg == REG_SP
+		       /* The restriction on Rd/Rt/Rt2 on Thumb mode has been
+			  relaxed since ARMv8-A.  */
+		       && !ARM_CPU_HAS_FEATURE (cpu_variant, arm_ext_v8))
+		{
+		  gas_assert (thumb);
+		  inst.error = BAD_SP;
+		}
 	    }
 	  break;
 
@@ -7284,14 +7290,23 @@ parse_operands (char *str, const unsigned int *pattern, bfd_boolean thumb)
 
 /* Reject "bad registers" for Thumb-2 instructions.  Many Thumb-2
    instructions are unpredictable if these registers are used.  This
-   is the BadReg predicate in ARM's Thumb-2 documentation.  */
-#define reject_bad_reg(reg)				\
-  do							\
-   if (reg == REG_SP || reg == REG_PC)			\
-     {							\
-       inst.error = (reg == REG_SP) ? BAD_SP : BAD_PC;	\
-       return;						\
-     }							\
+   is the BadReg predicate in ARM's Thumb-2 documentation.
+
+   Before ARMv8-A, REG_PC and REG_SP were not allowed in quite a few
+   places, while the restriction on REG_SP was relaxed since ARMv8-A.  */
+#define reject_bad_reg(reg)					\
+  do								\
+   if (reg == REG_PC)						\
+     {								\
+       inst.error = BAD_PC;					\
+       return;							\
+     }								\
+   else if (reg == REG_SP					\
+	    && !ARM_CPU_HAS_FEATURE (cpu_variant, arm_ext_v8))	\
+     {								\
+       inst.error = BAD_SP;					\
+       return;							\
+     }								\
   while (0)
 
 /* If REG is R13 (the stack pointer), warn that its use is
@@ -7955,17 +7970,13 @@ move_or_literal_pool (int i, enum lit_type t, bfd_boolean mode_3)
 	{
 	  if (thumb_p)
 	    {
-	      /* This can be encoded only for a low register.  */
-	      if ((v & ~0xFF) == 0 && (inst.operands[i].reg < 8))
-		{
-		  /* This can be done with a mov(1) instruction.  */
-		  inst.instruction = T_OPCODE_MOV_I8 | (inst.operands[i].reg << 8);
-		  inst.instruction |= v;
-		  return TRUE;
-		}
+	      /* LDR should not use lead in a flag-setting instruction being
+		 chosen so we do not check whether movs can be used.  */
 
-	      if (ARM_CPU_HAS_FEATURE (cpu_variant, arm_ext_v6t2)
+	      if ((ARM_CPU_HAS_FEATURE (cpu_variant, arm_ext_v6t2)
 		  || ARM_CPU_HAS_FEATURE (cpu_variant, arm_ext_v6t2_v8m))
+		  && inst.operands[i].reg != 13
+		  && inst.operands[i].reg != 15)
 		{
 		  /* Check if on thumb2 it can be done with a mov.w, mvn or
 		     movw instruction.  */
@@ -8647,7 +8658,7 @@ do_co_reg (void)
 	  || inst.instruction == 0xfe000010)
 	/* MCR, MCR2  */
 	reject_bad_reg (Rd);
-      else
+      else if (!ARM_CPU_HAS_FEATURE (cpu_variant, arm_ext_v8))
 	/* MRC, MRC2  */
 	constraint (Rd == REG_SP, BAD_SP);
     }
@@ -9112,6 +9123,11 @@ do_vmrs (void)
       return;
     }
 
+  /* MVFR2 is only valid at ARMv8-A.  */
+  if (inst.operands[1].reg == 5)
+    constraint (!ARM_CPU_HAS_FEATURE (cpu_variant, fpu_vfp_ext_armv8),
+		_(BAD_FPU));
+
   /* APSR_ sets isvec. All other refs to PC are illegal.  */
   if (!inst.operands[0].isvec && Rt == REG_PC)
     {
@@ -9137,6 +9153,11 @@ do_vmsr (void)
       inst.error = BAD_PC;
       return;
     }
+
+  /* MVFR2 is only valid for ARMv8-A.  */
+  if (inst.operands[0].reg == 5)
+    constraint (!ARM_CPU_HAS_FEATURE (cpu_variant, fpu_vfp_ext_armv8),
+		_(BAD_FPU));
 
   /* If we get through parsing the register name, we just insert the number
      generated into the instruction without further validation.  */
@@ -10517,7 +10538,8 @@ do_t_add_sub (void)
 	{
 	  int add;
 
-	  constraint (Rd == REG_SP && Rs != REG_SP, BAD_SP);
+	  if (!ARM_CPU_HAS_FEATURE (cpu_variant, arm_ext_v8))
+	    constraint (Rd == REG_SP && Rs != REG_SP, BAD_SP);
 
 	  add = (inst.instruction == T_MNEM_add
 		 || inst.instruction == T_MNEM_adds);
@@ -10641,7 +10663,8 @@ do_t_add_sub (void)
 	    }
 
 	  constraint (Rd == REG_PC, BAD_PC);
-	  constraint (Rd == REG_SP && Rs != REG_SP, BAD_SP);
+	  if (!ARM_CPU_HAS_FEATURE (cpu_variant, arm_ext_v8))
+	    constraint (Rd == REG_SP && Rs != REG_SP, BAD_SP);
 	  constraint (Rs == REG_PC, BAD_PC);
 	  reject_bad_reg (Rn);
 
@@ -11889,7 +11912,8 @@ do_t_mov_cmp (void)
 		  /* This is mov.w.  */
 		  constraint (Rn == REG_PC, BAD_PC);
 		  constraint (Rm == REG_PC, BAD_PC);
-		  constraint (Rn == REG_SP && Rm == REG_SP, BAD_SP);
+		  if (!ARM_CPU_HAS_FEATURE (cpu_variant, arm_ext_v8))
+		    constraint (Rn == REG_SP && Rm == REG_SP, BAD_SP);
 		}
 	    }
 	  else
@@ -13110,7 +13134,8 @@ do_t_tb (void)
   Rn = inst.operands[0].reg;
   Rm = inst.operands[0].imm;
 
-  constraint (Rn == REG_SP, BAD_SP);
+  if (!ARM_CPU_HAS_FEATURE (cpu_variant, arm_ext_v8))
+    constraint (Rn == REG_SP, BAD_SP);
   reject_bad_reg (Rm);
 
   constraint (!half && inst.operands[0].shifted,
@@ -18799,6 +18824,7 @@ static const struct reg_entry reg_names[] =
   REGDEF(FPINST,9,VFC), REGDEF(FPINST2,10,VFC),
   REGDEF(mvfr0,7,VFC), REGDEF(mvfr1,6,VFC),
   REGDEF(MVFR0,7,VFC), REGDEF(MVFR1,6,VFC),
+  REGDEF(mvfr2,5,VFC), REGDEF(MVFR2,5,VFC),
 
   /* Maverick DSP coprocessor registers.  */
   REGSET(mvf,MVF),  REGSET(mvd,MVD),  REGSET(mvfx,MVFX),  REGSET(mvdx,MVDX),

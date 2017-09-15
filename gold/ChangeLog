@@ -1,3 +1,90 @@
+2017-07-06  Han Shen  <shenhan@google.com>
+
+	PR gold/21491
+	* aarch64.cc (Erratum_stub::invalidate_erratum_stub): New method.
+	(Erratum_stub::is_invalidated_erratum_stub): New method.
+	(Stub_table::relocate_reloc_stub): Renamed from "relocate_stub".
+	(Stub_table::relocate_reloc_stubs): Renamed from "relocate_stubs".
+	(Stub_table::relocate_erratum_stub): New method.
+	(AArch64_relobj::fix_errata_and_relocate_erratum_stubs): Renamed from
+	"fix_errata".
+	(Target_aarch64::relocate_reloc_stub): Renamed from "relocate_stub".
+
+2017-06-21  Eric Christopher  <echristo@gmail.com>
+
+	Apply from master
+        2017-06-20  Eric Christopher  <echristo@gmail.com>
+
+	* aarch64.cc (scan_reloc_for_stub): Use plt_address_for_global to
+	calculate the symbol value.
+	(scan_reloc_section_for_stubs): Allow stubs to be created for
+	section symbols.
+	(maybe_apply_stub): Handle creating stubs for weak symbols to
+	match the code in scan_reloc_for_stub.
+
+2017-06-21  Eric Christopher  <echristo@gmail.com>
+
+	Apply from master
+        2017-06-15  Eric Christopher  <echristo@gmail.com>
+
+	* aarch64.cc: Fix a few typos and grammar-os.
+
+2017-06-21  Eric Christopher  <echristo@gmail.com>
+
+	Apply from master
+        2017-06-07  Eric Christopher  <echristo@gmail.com>
+
+	* aarch64.cc (maybe_apply_stub): Add debug logging for looking
+	up stubs to undefined symbols and early return rather than
+	fail to look them up.
+	(scan_reloc_for_stub): Add debug logging for no stub creation
+	for undefined symbols.
+
+2017-06-21  Eric Christopher  <echristo@gmail.com>
+
+	Apply from master
+	2017-05-15  Eric Christopher <echristo@gmail.com>
+
+        * layout.cc (Layout::segment_precedes): Add a case for testing
+        pointer equality when determining which segment precedes
+        another.
+
+2017-06-20  James Clarke  <jrtc27@jrtc27.com>
+
+	* powerpc.cc (Stub_table::define_stub_syms): Always include object's
+	uniq_ value.
+
+2017-06-03  Alan Modra  <amodra@gmail.com>
+
+	Apply from master
+	2017-05-23  Alan Modra  <amodra@gmail.com>
+	PR 21503
+	* options.h: Add --emit-stub-syms option.
+	* powerpc.cc (object_id): New.
+	(Powerpc_relobj): Add uniq_ and accessor.  Sort variables for
+	better packing.
+	(Powerpc_dynobj): Sort variables for better packing.
+	(Target_powerpc::define_local): New function.
+	(Target_powerpc::group_sections): Pass stub table size to
+	Stub_table constructor.
+	(Target_powerpc::do_relax): Define stub and glink symbols.
+	(Stub_table): Add uniq_ variable, and id param to constructor.
+	(Stub_table::Plt_stub_ent): Add indx_ variable.
+	(Stub_table::Branch_stub_entries): Move typedef earlier.
+	(Stub_table::branch_stub_size): Replace "to" parameter with a
+	Branch_stub_entries iterator.
+	(Stub_table::add_long_branch_entry): Adjust to suit.
+	(Stub_table::add_plt_call_entry): Set indx_.
+	(Stub_table::define_stub_syms): New function.
+
+2017-05-13  James Clarke  <jrtc27@jrtc27.com>
+
+	PR gold/21444
+	* gold.cc (Target_sparc::Relocate::relocate_tls): Local
+	variables are final for position-independent executables. This
+	has to be consistent with Target_sparc::Scan::local otherwise
+	they will disagree as to whether local-exec is used.
+
 2017-02-22  Alan Modra  <amodra@gmail.com>
 
 	* powerpc.cc (Target_powerpc::make_iplt_section): Check that

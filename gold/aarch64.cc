@@ -920,7 +920,7 @@ private:
 
 // Erratum stub class. An erratum stub differs from a reloc stub in that for
 // each erratum occurrence, we generate an erratum stub. We never share erratum
-// stubs, whereas for reloc stubs, different branches insns share a single reloc
+// stubs, whereas for reloc stubs, different branch insns share a single reloc
 // stub as long as the branch targets are the same. (More to the point, reloc
 // stubs can be shared because they're used to reach a specific target, whereas
 // erratum stubs branch back to the original control flow.)
@@ -1038,6 +1038,17 @@ public:
     // Lastly by section offset.
     return this->sh_offset_ < k.sh_offset_;
   }
+
+  void
+  invalidate_erratum_stub()
+  {
+     gold_assert(this->relobj_ != NULL);
+     this->relobj_ = NULL;
+  }
+
+  bool
+  is_invalidated_erratum_stub()
+  { return this->relobj_ == NULL; }
 
 protected:
   virtual void
@@ -1336,7 +1347,8 @@ Reloc_stub<size, big_endian>::stub_type_for_reloc(
   return ST_LONG_BRANCH_ABS;
 }
 
-// A class to hold stubs for the ARM target.
+// A class to hold stubs for the ARM target. This contains 2 different types of
+// stubs - reloc stubs and erratum stubs.
 
 template<int size, bool big_endian>
 class Stub_table : public Output_data
@@ -1428,14 +1440,18 @@ class Stub_table : public Output_data
     return (p != this->reloc_stubs_.end()) ? p->second : NULL;
   }
 
-  // Relocate stubs in this stub table.
+  // Relocate reloc stubs in this stub table. This does not relocate erratum stubs.
   void
-  relocate_stubs(const The_relocate_info*,
-		 The_target_aarch64*,
-		 Output_section*,
-		 unsigned char*,
-		 AArch64_address,
-		 section_size_type);
+  relocate_reloc_stubs(const The_relocate_info*,
+                       The_target_aarch64*,
+                       Output_section*,
+                       unsigned char*,
+                       AArch64_address,
+                       section_size_type);
+
+  // Relocate an erratum stub.
+  void
+  relocate_erratum_stub(The_erratum_stub*, unsigned char*);
 
   // Update data size at the end of a relaxation pass.  Return true if data size
   // is different from that of the previous relaxation pass.
@@ -1475,15 +1491,15 @@ class Stub_table : public Output_data
   { this->set_data_size(this->current_data_size()); }
 
  private:
-  // Relocate one stub.
+  // Relocate one reloc stub.
   void
-  relocate_stub(The_reloc_stub*,
-		const The_relocate_info*,
-		The_target_aarch64*,
-		Output_section*,
-		unsigned char*,
-		AArch64_address,
-		section_size_type);
+  relocate_reloc_stub(The_reloc_stub*,
+                      const The_relocate_info*,
+                      The_target_aarch64*,
+                      Output_section*,
+                      unsigned char*,
+                      AArch64_address,
+                      section_size_type);
 
  private:
   // Owner of this stub table.
@@ -1583,76 +1599,85 @@ Stub_table<size, big_endian>::add_reloc_stub(
 }
 
 
-// Relocate all stubs in this stub table.
+// Relocate an erratum stub.
 
 template<int size, bool big_endian>
 void
 Stub_table<size, big_endian>::
-relocate_stubs(const The_relocate_info* relinfo,
-	       The_target_aarch64* target_aarch64,
-	       Output_section* output_section,
-	       unsigned char* view,
-	       AArch64_address address,
-	       section_size_type view_size)
+relocate_erratum_stub(The_erratum_stub* estub,
+                      unsigned char* view)
+{
+  // Just for convenience.
+  const int BPI = AArch64_insn_utilities<big_endian>::BYTES_PER_INSN;
+
+  gold_assert(!estub->is_invalidated_erratum_stub());
+  AArch64_address stub_address = this->erratum_stub_address(estub);
+  // The address of "b" in the stub that is to be "relocated".
+  AArch64_address stub_b_insn_address;
+  // Branch offset that is to be filled in "b" insn.
+  int b_offset = 0;
+  switch (estub->type())
+    {
+    case ST_E_843419:
+    case ST_E_835769:
+      // The 1st insn of the erratum could be a relocation spot,
+      // in this case we need to fix it with
+      // "(*i)->erratum_insn()".
+      elfcpp::Swap<32, big_endian>::writeval(
+          view + (stub_address - this->address()),
+          estub->erratum_insn());
+      // For the erratum, the 2nd insn is a b-insn to be patched
+      // (relocated).
+      stub_b_insn_address = stub_address + 1 * BPI;
+      b_offset = estub->destination_address() - stub_b_insn_address;
+      AArch64_relocate_functions<size, big_endian>::construct_b(
+          view + (stub_b_insn_address - this->address()),
+          ((unsigned int)(b_offset)) & 0xfffffff);
+      break;
+    default:
+      gold_unreachable();
+      break;
+    }
+  estub->invalidate_erratum_stub();
+}
+
+
+// Relocate only reloc stubs in this stub table. This does not relocate erratum
+// stubs.
+
+template<int size, bool big_endian>
+void
+Stub_table<size, big_endian>::
+relocate_reloc_stubs(const The_relocate_info* relinfo,
+                     The_target_aarch64* target_aarch64,
+                     Output_section* output_section,
+                     unsigned char* view,
+                     AArch64_address address,
+                     section_size_type view_size)
 {
   // "view_size" is the total size of the stub_table.
   gold_assert(address == this->address() &&
 	      view_size == static_cast<section_size_type>(this->data_size()));
   for(Reloc_stub_map_const_iter p = this->reloc_stubs_.begin();
       p != this->reloc_stubs_.end(); ++p)
-    relocate_stub(p->second, relinfo, target_aarch64, output_section,
-		  view, address, view_size);
-
-  // Just for convenience.
-  const int BPI = AArch64_insn_utilities<big_endian>::BYTES_PER_INSN;
-
-  // Now 'relocate' erratum stubs.
-  for(Erratum_stub_set_iter i = this->erratum_stubs_.begin();
-      i != this->erratum_stubs_.end(); ++i)
-    {
-      AArch64_address stub_address = this->erratum_stub_address(*i);
-      // The address of "b" in the stub that is to be "relocated".
-      AArch64_address stub_b_insn_address;
-      // Branch offset that is to be filled in "b" insn.
-      int b_offset = 0;
-      switch ((*i)->type())
-	{
-	case ST_E_843419:
-	case ST_E_835769:
-	  // The 1st insn of the erratum could be a relocation spot,
-	  // in this case we need to fix it with
-	  // "(*i)->erratum_insn()".
-	  elfcpp::Swap<32, big_endian>::writeval(
-	      view + (stub_address - this->address()),
-	      (*i)->erratum_insn());
-	  // For the erratum, the 2nd insn is a b-insn to be patched
-	  // (relocated).
-	  stub_b_insn_address = stub_address + 1 * BPI;
-	  b_offset = (*i)->destination_address() - stub_b_insn_address;
-	  AArch64_relocate_functions<size, big_endian>::construct_b(
-	      view + (stub_b_insn_address - this->address()),
-	      ((unsigned int)(b_offset)) & 0xfffffff);
-	  break;
-	default:
-	  gold_unreachable();
-	  break;
-	}
-    }
+    relocate_reloc_stub(p->second, relinfo, target_aarch64, output_section,
+                        view, address, view_size);
 }
 
 
-// Relocate one stub.  This is a helper for Stub_table::relocate_stubs().
+// Relocate one reloc stub. This is a helper for
+// Stub_table::relocate_reloc_stubs().
 
 template<int size, bool big_endian>
 void
 Stub_table<size, big_endian>::
-relocate_stub(The_reloc_stub* stub,
-	      const The_relocate_info* relinfo,
-	      The_target_aarch64* target_aarch64,
-	      Output_section* output_section,
-	      unsigned char* view,
-	      AArch64_address address,
-	      section_size_type view_size)
+relocate_reloc_stub(The_reloc_stub* stub,
+                    const The_relocate_info* relinfo,
+                    The_target_aarch64* target_aarch64,
+                    Output_section* output_section,
+                    unsigned char* view,
+                    AArch64_address address,
+                    section_size_type view_size)
 {
   // "offset" is the offset from the beginning of the stub_table.
   section_size_type offset = stub->offset();
@@ -1660,8 +1685,8 @@ relocate_stub(The_reloc_stub* stub,
   // "view_size" is the total size of the stub_table.
   gold_assert(offset + stub_size <= view_size);
 
-  target_aarch64->relocate_stub(stub, relinfo, output_section,
-				view + offset, address + offset, view_size);
+  target_aarch64->relocate_reloc_stub(stub, relinfo, output_section,
+                                      view + offset, address + offset, view_size);
 }
 
 
@@ -1818,9 +1843,11 @@ class AArch64_relobj : public Sized_relobj_file<size, big_endian>
 			 Stringpool_template<char>*);
 
  private:
-  // Fix all errata in the object.
+  // Fix all errata in the object, and for each erratum, relocate corresponding
+  // erratum stub.
   void
-  fix_errata(typename Sized_relobj_file<size, big_endian>::Views* pviews);
+  fix_errata_and_relocate_erratum_stubs(
+      typename Sized_relobj_file<size, big_endian>::Views* pviews);
 
   // Try to fix erratum 843419 in an optimized way. Return true if patch is
   // applied.
@@ -1932,11 +1959,12 @@ AArch64_relobj<size, big_endian>::do_count_local_symbols(
 }
 
 
-// Fix all errata in the object.
+// Fix all errata in the object and for each erratum, we relocate the
+// corresponding erratum stub (by calling Stub_table::relocate_erratum_stub).
 
 template<int size, bool big_endian>
 void
-AArch64_relobj<size, big_endian>::fix_errata(
+AArch64_relobj<size, big_endian>::fix_errata_and_relocate_erratum_stubs(
     typename Sized_relobj_file<size, big_endian>::Views* pviews)
 {
   typedef typename elfcpp::Swap<32,big_endian>::Valtype Insntype;
@@ -1977,6 +2005,17 @@ AArch64_relobj<size, big_endian>::fix_errata(
 	      AArch64_relocate_functions<size, big_endian>::construct_b(
 		pview.view + stub->sh_offset(), b_offset & 0xfffffff);
 	    }
+
+          // Erratum fix is done (or skipped), continue to relocate erratum
+          // stub. Note, when erratum fix is skipped (either because we
+          // proactively change the code sequence or the code sequence is
+          // changed by relaxation, etc), we can still safely relocate the
+          // erratum stub, ignoring the fact the erratum could never be
+          // executed.
+          stub_table->relocate_erratum_stub(
+              stub, pview.view + (stub_table->address() - pview.address));
+
+          // Next erratum stub.
 	  ++p;
 	}
     }
@@ -2052,16 +2091,19 @@ AArch64_relobj<size, big_endian>::do_relocate_sections(
   if (parameters->options().relocatable())
     return;
 
+  // This part only relocates erratum stubs that belong to input sections of this
+  // object file.
   if (parameters->options().fix_cortex_a53_843419()
       || parameters->options().fix_cortex_a53_835769())
-    this->fix_errata(pviews);
+    this->fix_errata_and_relocate_erratum_stubs(pviews);
 
   Relocate_info<size, big_endian> relinfo;
   relinfo.symtab = symtab;
   relinfo.layout = layout;
   relinfo.object = this;
 
-  // Relocate stub tables.
+  // This part relocates all reloc stubs that are contained in stub_tables of
+  // this object file.
   unsigned int shnum = this->shnum();
   The_target_aarch64* target = The_target_aarch64::current_target();
 
@@ -2090,8 +2132,8 @@ AArch64_relobj<size, big_endian>::do_relocate_sections(
 	  unsigned char* view = view_struct.view + offset;
 	  AArch64_address address = stub_table->address();
 	  section_size_type view_size = stub_table->data_size();
-	  stub_table->relocate_stubs(&relinfo, target, os, view, address,
-				     view_size);
+	  stub_table->relocate_reloc_stubs(&relinfo, target, os, view, address,
+					   view_size);
 	}
     }
 }
@@ -2982,11 +3024,11 @@ class Target_aarch64 : public Sized_target<size, big_endian>
       Address view_address,
       section_size_type);
 
-  // Relocate a single stub.
+  // Relocate a single reloc stub.
   void
-  relocate_stub(The_reloc_stub*, const Relocate_info<size, big_endian>*,
-		Output_section*, unsigned char*, Address,
-		section_size_type);
+  relocate_reloc_stub(The_reloc_stub*, const Relocate_info<size, big_endian>*,
+                      Output_section*, unsigned char*, Address,
+                      section_size_type);
 
   // Get the default AArch64 target.
   static This*
@@ -3734,13 +3776,18 @@ Target_aarch64<size, big_endian>::scan_reloc_for_stub(
       if (gsym->use_plt_offset(arp->reference_flags()))
 	{
 	  // This uses a PLT, change the symbol value.
-	  symval.set_output_value(this->plt_section()->address()
-				  + gsym->plt_offset());
+	  symval.set_output_value(this->plt_address_for_global(gsym));
 	  psymval = &symval;
 	}
       else if (gsym->is_undefined())
-	// There is no need to generate a stub symbol is undefined.
-	return;
+	{
+          // There is no need to generate a stub symbol if the original symbol
+          // is undefined.
+          gold_debug(DEBUG_TARGET,
+                     "stub: not creating a stub for undefined symbol %s in file %s",
+                     gsym->name(), aarch64_relobj->name().c_str());
+          return;
+	}
     }
 
   // Get the symbol value.
@@ -3962,11 +4009,6 @@ Target_aarch64<size, big_endian>::scan_reloc_section_for_stubs(
 	  psymval = &symval2;
 	}
 
-      // If symbol is a section symbol, we don't know the actual type of
-      // destination.  Give up.
-      if (psymval->is_section_symbol())
-	continue;
-
       this->scan_reloc_for_stub(relinfo, r_type, sym, r_sym, psymval,
 				addend, view_address + offset);
     }  // End of iterating relocs in a section
@@ -4001,16 +4043,16 @@ Target_aarch64<size, big_endian>::scan_section_for_stubs(
 }
 
 
-// Relocate a single stub.
+// Relocate a single reloc stub.
 
 template<int size, bool big_endian>
 void Target_aarch64<size, big_endian>::
-relocate_stub(The_reloc_stub* stub,
-	      const The_relocate_info*,
-	      Output_section*,
-	      unsigned char* view,
-	      Address address,
-	      section_size_type)
+relocate_reloc_stub(The_reloc_stub* stub,
+                    const The_relocate_info*,
+                    Output_section*,
+                    unsigned char* view,
+                    Address address,
+                    section_size_type)
 {
   typedef AArch64_relocate_functions<size, big_endian> The_reloc_functions;
   typedef typename The_reloc_functions::Status The_reloc_functions_status;
@@ -5398,6 +5440,21 @@ maybe_apply_stub(unsigned int r_type,
 
   const The_aarch64_relobj* aarch64_relobj =
       static_cast<const The_aarch64_relobj*>(object);
+  const AArch64_reloc_property* arp =
+    aarch64_reloc_property_table->get_reloc_property(r_type);
+  gold_assert(arp != NULL);
+
+  // We don't create stubs for undefined symbols, but do for weak.
+  if (gsym
+      && !gsym->use_plt_offset(arp->reference_flags())
+      && gsym->is_undefined())
+    {
+      gold_debug(DEBUG_TARGET,
+		 "stub: looking for a stub for undefined symbol %s in file %s",
+		 gsym->name(), aarch64_relobj->name().c_str());
+      return false;
+    }
+
   The_stub_table* stub_table = aarch64_relobj->stub_table(relinfo->data_shndx);
   gold_assert(stub_table != NULL);
 
@@ -5409,9 +5466,6 @@ maybe_apply_stub(unsigned int r_type,
   Address new_branch_target = stub_table->address() + stub->offset();
   typename elfcpp::Swap<size, big_endian>::Valtype branch_offset =
       new_branch_target - address;
-  const AArch64_reloc_property* arp =
-      aarch64_reloc_property_table->get_reloc_property(r_type);
-  gold_assert(arp != NULL);
   typename This::Status status = This::template
       rela_general<32>(view, branch_offset, 0, arp);
   if (status != This::STATUS_OKAY)
@@ -7688,8 +7742,8 @@ Target_aarch64<size, big_endian>::Relocate::tls_ld_to_le(
     {
       // Ideally we should give up gd_to_le relaxation and do gd access.
       // However the gd_to_le relaxation decision has been made early
-      // in the scan stage, where we did not allocate any GOT entry for
-      // this symbol. Therefore we have to exit and report error now.
+      // in the scan stage, where we did not allocate a GOT entry for
+      // this symbol. Therefore we have to exit and report an error now.
       gold_error(_("unexpected reloc insn sequence while relaxing "
 		   "tls gd to le for reloc %u."), r_type);
       return aarch64_reloc_funcs::STATUS_BAD_RELOC;

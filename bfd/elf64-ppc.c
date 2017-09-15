@@ -7627,7 +7627,7 @@ tocsave_find (struct ppc_link_hash_table *htab,
   if (ent.sec == NULL || ent.sec->output_section == NULL)
     {
       _bfd_error_handler
-	(_("%B: undefined symbol on R_PPC64_TOCSAVE relocation"));
+	(_("%B: undefined symbol on R_PPC64_TOCSAVE relocation"), ibfd);
       return NULL;
     }
 
@@ -14798,8 +14798,10 @@ ppc64_elf_relocate_section (bfd *output_bfd,
 	    break;
 
 	  if (bfd_link_pic (info)
-	      ? ((h != NULL && pc_dynrelocs (h))
-		 || must_be_dyn_reloc (info, r_type))
+	      ? ((h == NULL
+		  || h->dyn_relocs != NULL)
+		 && ((h != NULL && pc_dynrelocs (h))
+		     || must_be_dyn_reloc (info, r_type)))
 	      : (h != NULL
 		 ? h->dyn_relocs != NULL
 		 : ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC))
